@@ -16,33 +16,41 @@ const isValidPhone = (str) =>
     str,
   );
 
-const fakeCart = [
-  {
-    pizzaId: 12,
-    name: "Mediterranean",
-    quantity: 2,
-    unitPrice: 16,
-    totalPrice: 32,
-  },
-  {
-    pizzaId: 6,
-    name: "Vegetale",
-    quantity: 1,
-    unitPrice: 13,
-    totalPrice: 13,
-  },
-  {
-    pizzaId: 11,
-    name: "Spinach and Mushroom",
-    quantity: 1,
-    unitPrice: 15,
-    totalPrice: 15,
-  },
-];
+// const fakeCart = [
+//   {
+//     pizzaId: 12,
+//     name: "Mediterranean",
+//     quantity: 2,
+//     unitPrice: 16,
+//     totalPrice: 32,
+//   },
+//   {
+//     pizzaId: 6,
+//     name: "Vegetale",
+//     quantity: 1,
+//     unitPrice: 13,
+//     totalPrice: 13,
+//   },
+//   {
+//     pizzaId: 11,
+//     name: "Spinach and Mushroom",
+//     quantity: 1,
+//     unitPrice: 15,
+//     totalPrice: 15,
+//   },
+// ];
 
 function CreateOrder() {
   const [withPriority, setWithPriority] = useState(false);
-  const username = useSelector((state) => state.user.username);
+  const {
+    username,
+    status: addressStatus,
+    position,
+    address,
+    error: errorAddress,
+  } = useSelector((state) => state.user);
+  const isLoadingAddress = addressStatus === "loading";
+
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
   const totalCartPrice = useSelector(getTotalCartPrice);
@@ -62,8 +70,6 @@ function CreateOrder() {
       <h2 className="mb-8 text-xl font-semibold">
         Ready to order? Let&#39;s go!
       </h2>
-
-      <button onClick={() => dispatch(fetchAddress())}>GET POSITION</button>
 
       <Form method="POST">
         <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -89,16 +95,37 @@ function CreateOrder() {
           </div>
         </div>
 
-        <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center">
-          <label className="sm:basis-40">Address</label>
-          <div className="grow">
+        <div className="relative mb-5 flex flex-col gap-2 sm:flex-row sm:items-start">
+          <label className="pt-2.5 sm:basis-40">Address</label>
+          <div className="flex grow flex-col">
             <input
               className="input w-full"
+              defaultValue={address}
               type="text"
               name="address"
+              disabled={isLoadingAddress}
               required
             />
+            {addressStatus === "error" && (
+              <p className="mt-2 rounded-md bg-red-100 p-2 text-xs text-red-700">
+                {errorAddress}
+              </p>
+            )}
           </div>
+          {!address && (
+            <span className="absolute right-[5px]  top-[5px]">
+              <Button
+                disabled={isLoadingAddress}
+                type="small"
+                onClick={(e) => {
+                  e.preventDefault();
+                  dispatch(fetchAddress());
+                }}
+              >
+                Get Position
+              </Button>
+            </span>
+          )}
         </div>
 
         <div className="mb-12 flex items-center gap-5">
@@ -117,8 +144,18 @@ function CreateOrder() {
 
         <div>
           <input type="hidden" name="cart" value={JSON.stringify(cart)} />
+          <input
+            type="hidden"
+            name="position"
+            value={
+              position.latitude && position.longitude
+                ? `${position.latitude},${position.longitude}`
+                : ""
+            }
+          />
+
           <Button disabled={isSubmitting} type="primary">
-            {isSubmitting
+            {isSubmitting || isLoadingAddress
               ? "Placing Order"
               : `Order Now for ${formatCurrency(totalPrice)}`}
           </Button>
